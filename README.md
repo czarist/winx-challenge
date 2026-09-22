@@ -14,6 +14,7 @@ Desenvolvida em Laravel 13 para o desafio técnico "Desenvolvedor(a) Back-End S�
 [![JWT](https://img.shields.io/badge/Auth-JWT-000000?style=flat-square&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-6BA539?style=flat-square&logo=swagger&logoColor=white)](#documentação-interativa-swagger)
 [![Tests](https://img.shields.io/badge/tests-77%20passing-4E9A06?style=flat-square&logo=php&logoColor=white)](#testes-automatizados)
+[![Coverage](https://img.shields.io/badge/coverage-83.7%25-4E9A06?style=flat-square&logo=php&logoColor=white)](#testes-automatizados)
 
 [Stack](#stack) • [Arquitetura](#arquitetura) • [Docker](#setup-com-docker) • [Local](#setup-local) • [Swagger](#documentação-interativa-swagger) • [Busca full-text](#busca-full-text-elasticsearch) • [Testes](#testes-automatizados) • [Exemplos de API](#exemplos-de-chamadas-de-api) • [Diferenciais](#diferenciais-implementados)
 
@@ -203,6 +204,16 @@ Cobre autenticação (registro, login, logout, refresh, incluindo blacklist de t
 
 Inclui regressões para paginação com datas iguais, limites numéricos do PostgreSQL, seed repetido, headers de erros HTTP e reconciliação do Elasticsearch com HTTP simulado. A configuração força SQLite em memória mesmo com variáveis externas. A suíte aborta antes das migrations se detectar outra configuração de banco; nesse caso, limpe o cache com `php artisan config:clear`.
 
+### Cobertura de testes
+
+```bash
+composer test-coverage
+```
+
+Usa o driver [PCOV](https://github.com/krakjoe/pcov), já habilitado na imagem Docker (`docker compose exec app composer test-coverage`) e escopado só a `app/` via `pcov.directory`, para não instrumentar `vendor/`. Rodar localmente fora do Docker exige instalar PCOV ou Xdebug à parte — não vem com o PHP puro.
+
+Cobertura atual: **83.7%** de linhas em `app/`. Os pontos mais baixos são código de infraestrutura difícil de exercitar sem os serviços reais: `OpenApi/GeneratorFactory` (integração com o gerador do L5Swagger, coberta indiretamente pelo `l5-swagger:generate` rodando no Docker, não por teste unitário), trechos de reconciliação por scroll do `ElasticsearchProductSearchService` e o `ReindexProducts` (comando de infraestrutura, testado via `ElasticsearchProductSearchServiceTest` no nível do serviço, não do comando em si).
+
 ---
 
 ## Exemplos de chamadas de API
@@ -343,7 +354,7 @@ Toda resposta de erro segue o mesmo formato, independente da causa (validação,
 - **JWT completo** — register/login/logout/refresh, com blacklist de token (logout e refresh invalidam o token anterior) — não apenas o login básico pedido no desafio.
 - **Swagger/OpenAPI** — todos os endpoints documentados via anotações `@OA\*` em docblock, com schemas de request/response, exemplos e autenticação testável direto pela UI.
 - **Repository/Service por trás de interfaces** — injeção de dependência via `AppServiceProvider`, sem acoplar a regra de negócio ao Eloquent nem os controllers à implementação concreta (vale para o Postgres e para o Elasticsearch).
-- **Testes automatizados** — 77 testes (PHPUnit) cobrindo autenticação e as regras de negócio de produtos, rodando sem depender de Postgres, Elasticsearch ou Docker.
+- **Testes automatizados** — 77 testes (PHPUnit) cobrindo autenticação e as regras de negócio de produtos, rodando sem depender de Postgres, Elasticsearch ou Docker. 83,7% de cobertura de linhas em `app/`, medida via PCOV (ver [Cobertura de testes](#cobertura-de-testes)).
 - **Rate limiting** — 60 requisições/minuto por usuário (ou IP, se não autenticado) nas rotas de API.
 - **Execução dual sem alteração de código** — um único `docker-compose.yml` e `.env.example` cobrem Docker e execução local; o `app` container faz o próprio setup (install, migrate, seed, permissões, docs, reindexação) e o Nginx só recebe tráfego depois que esse setup termina de verdade.
 - **Busca portável** — o filtro de nome do Postgres usa `LOWER()+LIKE` em vez de `ILIKE` (específico do Postgres), então o mesmo código funciona nos testes (SQLite) e em produção (Postgres) sem sacrificar a busca case-insensitive.

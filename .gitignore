@@ -20,6 +20,7 @@
 /public/storage
 /storage/api-docs
 /storage/*.key
+/storage/coverage
 /storage/framework/docker-ready
 /storage/pail
 /vendor

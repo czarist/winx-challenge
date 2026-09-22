@@ -108,6 +108,7 @@ class ProductCrudTest extends TestCase
 
         $response->assertNotFound();
     }
+
     public function test_invalid_product_identifiers_return_404(): void
     {
         $this->actingAs($this->user, 'api');

@@ -109,6 +109,7 @@ class ProductListingTest extends TestCase
         $inStock->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.nome', 'Com estoque');
         $outOfStock->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.nome', 'Sem estoque');
     }
+
     public function test_maximum_price_works_without_a_minimum(): void
     {
         Product::factory()->create(['preco' => 50]);
