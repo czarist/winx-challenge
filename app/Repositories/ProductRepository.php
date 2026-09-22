@@ -43,7 +43,13 @@ class ProductRepository implements ProductRepositoryInterface
     private function applyFilters(Builder $query, ProductFilters $filters): Builder
     {
         return $query
-            ->when($filters->search, fn (Builder $q, string $search) => $q->where('nome', 'ilike', "%{$search}%"))
+            // LOWER()+LIKE em vez de ILIKE: funciona igual no Postgres (uso
+            // real) e no SQLite (usado nos testes), sem SQL específico de
+            // um único driver.
+            ->when($filters->search, fn (Builder $q, string $search) => $q->whereRaw(
+                'LOWER(nome) LIKE ?',
+                ['%'.mb_strtolower($search).'%'],
+            ))
             ->when($filters->categoria, fn (Builder $q, string $categoria) => $q->where('categoria', $categoria))
             ->when($filters->precoMin !== null, fn (Builder $q) => $q->where('preco', '>=', $filters->precoMin))
             ->when($filters->precoMax !== null, fn (Builder $q) => $q->where('preco', '<=', $filters->precoMax))
