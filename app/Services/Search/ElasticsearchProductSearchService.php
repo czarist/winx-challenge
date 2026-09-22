@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services\Search;
 
 use App\DataTransferObjects\ProductSearchResult;
@@ -23,13 +22,13 @@ class ElasticsearchProductSearchService implements ProductSearchServiceInterface
 
         $this->client->index([
             'index' => $this->index,
-            'id' => (string) $product->id,
-            'body' => [
-                'nome' => $product->nome,
+            'id'    => (string) $product->id,
+            'body'  => [
+                'nome'      => $product->nome,
                 'descricao' => $product->descricao,
                 'categoria' => $product->categoria,
-                'preco' => (float) $product->preco,
-                'estoque' => $product->estoque,
+                'preco'     => (float) $product->preco,
+                'estoque'   => $product->estoque,
             ],
         ]);
     }
@@ -49,21 +48,21 @@ class ElasticsearchProductSearchService implements ProductSearchServiceInterface
 
         $response = $this->client->search([
             'index' => $this->index,
-            'body' => [
-                'size' => $limit,
-                'query' => [
+            'body'  => [
+                'size'    => $limit,
+                'query'   => [
                     'multi_match' => [
-                        'query' => $query,
-                        'fields' => ['nome^3', 'categoria^2', 'descricao'],
+                        'query'     => $query,
+                        'fields'    => ['nome^3', 'categoria^2', 'descricao'],
                         'fuzziness' => 'AUTO',
                     ],
                 ],
                 'suggest' => [
                     'nome_suggest' => [
-                        'prefix' => $query,
+                        'prefix'     => $query,
                         'completion' => [
-                            'field' => 'nome.suggest',
-                            'size' => 5,
+                            'field'           => 'nome.suggest',
+                            'size'            => 5,
                             'skip_duplicates' => true,
                         ],
                     ],
@@ -79,15 +78,12 @@ class ElasticsearchProductSearchService implements ProductSearchServiceInterface
      */
     private function toResult(array $response): ProductSearchResult
     {
-        $hits = $response['hits']['hits'] ?? [];
-        $orderedIds = array_map(fn (array $hit) => (int) $hit['_id'], $hits);
+        $hits       = $response['hits']['hits'] ?? [];
+        $orderedIds = array_map(fn(array $hit) => (int) $hit['_id'], $hits);
 
-        // Os ids/score vêm do Elasticsearch, mas os dados retornados são
-        // buscados de novo no Postgres — fonte da verdade — para nunca
-        // devolver um produto desatualizado em relação ao índice.
         $products = Product::whereIn('id', $orderedIds)
             ->get()
-            ->sortBy(fn (Product $product) => array_search($product->id, $orderedIds, true))
+            ->sortBy(fn(Product $product) => array_search($product->id, $orderedIds, true))
             ->values();
 
         $suggestions = collect($response['suggest']['nome_suggest'][0]['options'] ?? [])
@@ -111,22 +107,19 @@ class ElasticsearchProductSearchService implements ProductSearchServiceInterface
 
         $this->client->indices()->create([
             'index' => $this->index,
-            'body' => [
+            'body'  => [
                 'mappings' => [
                     'properties' => [
-                        'nome' => [
-                            'type' => 'text',
+                        'nome'      => [
+                            'type'   => 'text',
                             'fields' => [
-                                // Multi-field: mesmo valor de "nome", indexado
-                                // também como completion suggester para as
-                                // sugestões de busca.
                                 'suggest' => ['type' => 'completion'],
                             ],
                         ],
                         'descricao' => ['type' => 'text'],
                         'categoria' => ['type' => 'text'],
-                        'preco' => ['type' => 'float'],
-                        'estoque' => ['type' => 'integer'],
+                        'preco'     => ['type' => 'float'],
+                        'estoque'   => ['type' => 'integer'],
                     ],
                 ],
             ],

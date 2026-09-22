@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Repositories;
 
 use App\DataTransferObjects\ProductFilters;
@@ -43,17 +42,14 @@ class ProductRepository implements ProductRepositoryInterface
     private function applyFilters(Builder $query, ProductFilters $filters): Builder
     {
         return $query
-            // LOWER()+LIKE em vez de ILIKE: funciona igual no Postgres (uso
-            // real) e no SQLite (usado nos testes), sem SQL específico de
-            // um único driver.
-            ->when($filters->search, fn (Builder $q, string $search) => $q->whereRaw(
+            ->when($filters->search, fn(Builder $q, string $search) => $q->whereRaw(
                 'LOWER(nome) LIKE ?',
-                ['%'.mb_strtolower($search).'%'],
+                ['%' . mb_strtolower($search) . '%'],
             ))
-            ->when($filters->categoria, fn (Builder $q, string $categoria) => $q->where('categoria', $categoria))
-            ->when($filters->precoMin !== null, fn (Builder $q) => $q->where('preco', '>=', $filters->precoMin))
-            ->when($filters->precoMax !== null, fn (Builder $q) => $q->where('preco', '<=', $filters->precoMax))
-            ->when($filters->emEstoque === true, fn (Builder $q) => $q->where('estoque', '>', 0))
-            ->when($filters->emEstoque === false, fn (Builder $q) => $q->where('estoque', '<=', 0));
+            ->when($filters->categoria, fn(Builder $q, string $categoria) => $q->where('categoria', $categoria))
+            ->when($filters->precoMin !== null, fn(Builder $q) => $q->where('preco', '>=', $filters->precoMin))
+            ->when($filters->precoMax !== null, fn(Builder $q) => $q->where('preco', '<=', $filters->precoMax))
+            ->when($filters->emEstoque === true, fn(Builder $q) => $q->where('estoque', '>', 0))
+            ->when($filters->emEstoque === false, fn(Builder $q) => $q->where('estoque', '<=', 0));
     }
 }

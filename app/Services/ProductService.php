@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services;
 
 use App\DataTransferObjects\ProductFilters;
@@ -48,7 +47,7 @@ class ProductService implements ProductServiceInterface
 
     public function delete(int $id, int $userId): void
     {
-        $product = $this->repository->findOrFail($id);
+        $product  = $this->repository->findOrFail($id);
         $snapshot = $product->toArray();
 
         $this->repository->delete($product);
@@ -57,11 +56,6 @@ class ProductService implements ProductServiceInterface
     }
 
     /**
-     * Efeitos colaterais de toda escrita em produto: nenhum deles roda de
-     * forma síncrona no request, ambos são jobs em fila independentes (o
-     * índice de busca pode falhar/ficar indisponível sem afetar o log de
-     * auditoria, e vice-versa).
-     *
      * @param  array<string, mixed>  $payload
      */
     private function afterWrite(?int $productId, int $userId, ProductLogAction $action, array $payload): void

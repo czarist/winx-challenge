@@ -22,9 +22,6 @@ class ListProductsRequest extends FormRequest
             'categoria' => ['nullable', 'string', 'max:100'],
             'preco_min' => ['nullable', 'numeric', 'min:0'],
             'preco_max' => ['nullable', 'numeric', 'min:0', 'gte:preco_min'],
-            // Query strings chegam como texto, então "true"/"false" também
-            // precisam ser aceitos além de "1"/"0" (a regra `boolean`
-            // nativa do Laravel rejeita essas duas primeiras strings).
             'em_estoque' => ['nullable', 'in:true,false,0,1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];

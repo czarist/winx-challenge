@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Jobs;
 
 use App\Enums\ProductLogAction;
@@ -27,8 +26,6 @@ class SyncProductSearchIndex implements ShouldQueue
 
         $product = Product::find($this->productId);
 
-        // O produto pode já ter sido removido por uma exclusão logo em
-        // seguida; nesse caso não há nada para indexar.
         if ($product !== null) {
             $search->index($product);
         }

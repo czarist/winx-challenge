@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Providers;
 
 use App\OpenApi\GeneratorFactory;
@@ -32,18 +31,15 @@ class AppServiceProvider extends ServiceProvider
             $this->app->environment('testing') ? NullProductSearchService::class : ElasticsearchProductSearchService::class,
         );
 
-        $this->app->singleton(Client::class, fn () => ClientBuilder::create()
-            ->setHosts(config('elasticsearch.hosts'))
-            ->build());
+        $this->app->singleton(Client::class, fn() => ClientBuilder::create()
+                ->setHosts(config('elasticsearch.hosts'))
+                ->build());
 
-        // Restores docblock-style @OA\* annotation scanning for the Swagger
-        // docs (see App\OpenApi\GeneratorFactory for why this can't just be
-        // a config value).
         $this->app->bind(BaseGeneratorFactory::class, GeneratorFactory::class);
     }
 
     public function boot(): void
     {
-        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip()));
+        RateLimiter::for('api', fn(Request $request) => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip()));
     }
 }
