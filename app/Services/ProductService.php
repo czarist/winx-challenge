@@ -5,6 +5,7 @@ namespace App\Services;
 use App\DataTransferObjects\ProductFilters;
 use App\Enums\ProductLogAction;
 use App\Jobs\LogProductActivity;
+use App\Jobs\SyncProductSearchIndex;
 use App\Models\Product;
 use App\Repositories\Contracts\ProductRepositoryInterface;
 use App\Services\Contracts\ProductServiceInterface;
@@ -30,7 +31,7 @@ class ProductService implements ProductServiceInterface
     {
         $product = $this->repository->create($data);
 
-        $this->logActivity($product->id, $userId, ProductLogAction::Created, $product->toArray());
+        $this->afterWrite($product->id, $userId, ProductLogAction::Created, $product->toArray());
 
         return $product;
     }
@@ -40,7 +41,7 @@ class ProductService implements ProductServiceInterface
         $product = $this->repository->findOrFail($id);
         $product = $this->repository->update($product, $data);
 
-        $this->logActivity($product->id, $userId, ProductLogAction::Updated, $product->toArray());
+        $this->afterWrite($product->id, $userId, ProductLogAction::Updated, $product->toArray());
 
         return $product;
     }
@@ -52,14 +53,23 @@ class ProductService implements ProductServiceInterface
 
         $this->repository->delete($product);
 
-        $this->logActivity($id, $userId, ProductLogAction::Deleted, $snapshot);
+        $this->afterWrite($id, $userId, ProductLogAction::Deleted, $snapshot);
     }
 
     /**
+     * Efeitos colaterais de toda escrita em produto: nenhum deles roda de
+     * forma síncrona no request, ambos são jobs em fila independentes (o
+     * índice de busca pode falhar/ficar indisponível sem afetar o log de
+     * auditoria, e vice-versa).
+     *
      * @param  array<string, mixed>  $payload
      */
-    private function logActivity(?int $productId, int $userId, ProductLogAction $action, array $payload): void
+    private function afterWrite(?int $productId, int $userId, ProductLogAction $action, array $payload): void
     {
         LogProductActivity::dispatch($productId, $userId, $action, $payload);
+
+        if ($productId !== null) {
+            SyncProductSearchIndex::dispatch($productId, $action);
+        }
     }
 }
