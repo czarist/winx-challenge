@@ -94,4 +94,32 @@ class ProductListingTest extends TestCase
         $inStock->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.nome', 'Com estoque');
         $outOfStock->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.nome', 'Sem estoque');
     }
+    public function test_maximum_price_works_without_a_minimum(): void
+    {
+        Product::factory()->create(['preco' => 50]);
+        Product::factory()->create(['preco' => 150]);
+
+        foreach (['preco_max=100', 'preco_min=&preco_max=100'] as $query) {
+            $this->actingAs($this->user, 'api')->getJson('/api/v1/products?'.$query)
+                ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.preco', 50);
+        }
+    }
+
+    public function test_zero_is_a_valid_name_search(): void
+    {
+        Product::factory()->create(['nome' => 'Modelo 0']);
+        Product::factory()->create(['nome' => 'Outro']);
+
+        $this->actingAs($this->user, 'api')->getJson('/api/v1/products?search=0')
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.nome', 'Modelo 0');
+    }
+
+    public function test_zero_is_a_valid_category_filter(): void
+    {
+        Product::factory()->create(['categoria' => '0']);
+        Product::factory()->create(['categoria' => 'Outra']);
+
+        $this->actingAs($this->user, 'api')->getJson('/api/v1/products?categoria=0')
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.categoria', '0');
+    }
 }

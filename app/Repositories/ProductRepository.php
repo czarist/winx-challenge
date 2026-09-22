@@ -42,11 +42,11 @@ class ProductRepository implements ProductRepositoryInterface
     private function applyFilters(Builder $query, ProductFilters $filters): Builder
     {
         return $query
-            ->when($filters->search, fn(Builder $q, string $search) => $q->whereRaw(
+            ->when($filters->search !== null && $filters->search !== '', fn(Builder $q) => $q->whereRaw(
                 'LOWER(nome) LIKE ?',
-                ['%' . mb_strtolower($search) . '%'],
+                ['%' . mb_strtolower($filters->search) . '%'],
             ))
-            ->when($filters->categoria, fn(Builder $q, string $categoria) => $q->where('categoria', $categoria))
+            ->when($filters->categoria !== null && $filters->categoria !== '', fn(Builder $q) => $q->where('categoria', $filters->categoria))
             ->when($filters->precoMin !== null, fn(Builder $q) => $q->where('preco', '>=', $filters->precoMin))
             ->when($filters->precoMax !== null, fn(Builder $q) => $q->where('preco', '<=', $filters->precoMax))
             ->when($filters->emEstoque === true, fn(Builder $q) => $q->where('estoque', '>', 0))

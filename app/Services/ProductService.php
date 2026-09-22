@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Repositories\Contracts\ProductRepositoryInterface;
 use App\Services\Contracts\ProductServiceInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class ProductService implements ProductServiceInterface
 {
@@ -28,31 +29,37 @@ class ProductService implements ProductServiceInterface
 
     public function create(array $data, int $userId): Product
     {
-        $product = $this->repository->create($data);
+        return DB::transaction(function () use ($data, $userId): Product {
+            $product = $this->repository->create($data);
 
-        $this->afterWrite($product->id, $userId, ProductLogAction::Created, $product->toArray());
+            $this->afterWrite($product->id, $userId, ProductLogAction::Created, $product->toArray());
 
-        return $product;
+            return $product;
+        });
     }
 
     public function update(int $id, array $data, int $userId): Product
     {
-        $product = $this->repository->findOrFail($id);
-        $product = $this->repository->update($product, $data);
+        return DB::transaction(function () use ($id, $data, $userId): Product {
+            $product = $this->repository->findOrFail($id);
+            $product = $this->repository->update($product, $data);
 
-        $this->afterWrite($product->id, $userId, ProductLogAction::Updated, $product->toArray());
+            $this->afterWrite($product->id, $userId, ProductLogAction::Updated, $product->toArray());
 
-        return $product;
+            return $product;
+        });
     }
 
     public function delete(int $id, int $userId): void
     {
-        $product  = $this->repository->findOrFail($id);
-        $snapshot = $product->toArray();
+        DB::transaction(function () use ($id, $userId): void {
+            $product  = $this->repository->findOrFail($id);
+            $snapshot = $product->toArray();
 
-        $this->repository->delete($product);
+            $this->repository->delete($product);
 
-        $this->afterWrite($id, $userId, ProductLogAction::Deleted, $snapshot);
+            $this->afterWrite($id, $userId, ProductLogAction::Deleted, $snapshot);
+        });
     }
 
     /**
@@ -60,6 +67,7 @@ class ProductService implements ProductServiceInterface
      */
     private function afterWrite(?int $productId, int $userId, ProductLogAction $action, array $payload): void
     {
+        // A fila database usa a mesma conexão e transação da escrita do produto.
         LogProductActivity::dispatch($productId, $userId, $action, $payload);
 
         if ($productId !== null) {

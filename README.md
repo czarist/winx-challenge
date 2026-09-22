@@ -13,7 +13,7 @@ Desenvolvida em Laravel 13 para o desafio técnico "Desenvolvedor(a) Back-End S�
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 [![JWT](https://img.shields.io/badge/Auth-JWT-000000?style=flat-square&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-6BA539?style=flat-square&logo=swagger&logoColor=white)](#documentação-interativa-swagger)
-[![Tests](https://img.shields.io/badge/tests-50%20passing-4E9A06?style=flat-square&logo=php&logoColor=white)](#testes-automatizados)
+[![Tests](https://img.shields.io/badge/tests-56%20passing-4E9A06?style=flat-square&logo=php&logoColor=white)](#testes-automatizados)
 
 [Stack](#stack) • [Arquitetura](#arquitetura) • [Docker](#setup-com-docker) • [Local](#setup-local) • [Swagger](#documentação-interativa-swagger) • [Busca full-text](#busca-full-text-elasticsearch) • [Testes](#testes-automatizados) • [Exemplos de API](#exemplos-de-chamadas-de-api) • [Diferenciais](#diferenciais-implementados)
 
@@ -58,7 +58,9 @@ app/
 
 **Controller → Service → Repository** — cada camada depende de uma interface (`ProductRepositoryInterface`, `ProductServiceInterface`, `AuthServiceInterface`, `ProductSearchServiceInterface`), com a implementação concreta resolvida via container em `AppServiceProvider`. Isso mantém a regra de negócio testável e trocável (ex.: dá pra substituir o repositório do Postgres, ou o motor de busca, sem tocar no controller) sem forçar padrões desnecessários em cima disso.
 
-Toda escrita em produto dispara dois jobs independentes, nenhum deles síncrono no controller:
+Toda escrita em produto e o enfileiramento dos dois jobs ocorrem na mesma transação. Com a fila `database` na mesma conexão do produto e `after_commit=false` (configuração padrão), uma falha ao enfileirar desfaz toda a operação. Trocar a fila por um serviço externo exige outra estratégia, como outbox, para manter essa garantia.
+
+Os jobs são executados de forma independente, nenhum deles síncrono no controller:
 
 - `LogProductActivity` — grava a auditoria em `product_logs`. Roda inclusive na exclusão, quando o produto já não existe mais no banco no momento em que o job executa (por isso `product_logs.product_id` não tem foreign key: é um registro histórico, não uma relação viva).
 - `SyncProductSearchIndex` — indexa/remove o produto no Elasticsearch. Se o Elasticsearch estiver fora do ar, esse job falha e é reprocessado (`--tries=3` no worker) sem afetar a resposta da API nem o log de auditoria — são falhas isoladas uma da outra.
@@ -75,6 +77,8 @@ docker compose up -d --build
 ```
 
 O container `app` cuida de tudo sozinho no primeiro boot: instala dependências (se `vendor/` não existir), gera `APP_KEY`/`JWT_SECRET` (se ausentes), espera o Postgres ficar pronto, roda as migrations, popula o banco (só na primeira vez) e gera a documentação do Swagger — antes de subir o PHP-FPM. O Nginx só começa a aceitar tráfego depois que esse setup termina (via healthcheck), então não há corrida entre os containers. Em background, ele também tenta reindexar os produtos no Elasticsearch (ver [Busca full-text](#busca-full-text-elasticsearch)) assim que o cluster fica disponível, sem bloquear a API por isso.
+
+O worker também aguarda o healthcheck do `app` antes de iniciar, sem depender do arquivo marcador de seed, e usa `restart: unless-stopped` para se recuperar de falhas.
 
 Serviços subidos:
 
@@ -333,7 +337,7 @@ Toda resposta de erro segue o mesmo formato, independente da causa (validação,
 - **JWT completo** — register/login/logout/refresh, com blacklist de token (logout e refresh invalidam o token anterior) — não apenas o login básico pedido no desafio.
 - **Swagger/OpenAPI** — todos os endpoints documentados via anotações `@OA\*` em docblock, com schemas de request/response, exemplos e autenticação testável direto pela UI.
 - **Repository/Service por trás de interfaces** — injeção de dependência via `AppServiceProvider`, sem acoplar a regra de negócio ao Eloquent nem os controllers à implementação concreta (vale para o Postgres e para o Elasticsearch).
-- **Testes automatizados** — 50 testes (PHPUnit) cobrindo autenticação e as regras de negócio de produtos, rodando sem depender de Postgres, Elasticsearch ou Docker.
+- **Testes automatizados** — 56 testes (PHPUnit) cobrindo autenticação e as regras de negócio de produtos, rodando sem depender de Postgres, Elasticsearch ou Docker.
 - **Rate limiting** — 60 requisições/minuto por usuário (ou IP, se não autenticado) nas rotas de API.
 - **Execução dual sem alteração de código** — um único `docker-compose.yml` e `.env.example` cobrem Docker e execução local; o `app` container faz o próprio setup (install, migrate, seed, permissões, docs, reindexação) e o Nginx só recebe tráfego depois que esse setup termina de verdade.
 - **Busca portável** — o filtro de nome do Postgres usa `LOWER()+LIKE` em vez de `ILIKE` (específico do Postgres), então o mesmo código funciona nos testes (SQLite) e em produção (Postgres) sem sacrificar a busca case-insensitive.

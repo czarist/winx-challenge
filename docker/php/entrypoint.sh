@@ -49,13 +49,7 @@ if [ "$1" = "php-fpm" ]; then
     mkdir -p "$(dirname "$READY_MARKER")"
     touch "$READY_MARKER"
 else
-    # Containers de worker reaproveitam esta mesma imagem, então só
-    # precisam esperar o container app terminar o setup inicial (install,
-    # chaves, migrations) em vez de repeti-lo.
-    until [ -f "$READY_MARKER" ]; do
-        echo "Aguardando o container app finalizar o setup..."
-        sleep 2
-    done
+    wait_for_database
 fi
 
 exec "$@"

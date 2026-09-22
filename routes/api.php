@@ -5,6 +5,8 @@ use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\ProductSearchController;
 use Illuminate\Support\Facades\Route;
 
+Route::pattern('product', '[0-9]{1,18}');
+
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->controller(AuthController::class)->group(function () {
         Route::post('register', 'register');

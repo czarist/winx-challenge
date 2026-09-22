@@ -108,4 +108,15 @@ class ProductCrudTest extends TestCase
 
         $response->assertNotFound();
     }
+    public function test_invalid_product_identifiers_return_404(): void
+    {
+        $this->actingAs($this->user, 'api');
+
+        foreach (['abc', '-1', '1.5', '999999999999999999999999'] as $id) {
+            foreach (['GET', 'PUT', 'PATCH', 'DELETE'] as $method) {
+                $this->json($method, '/api/v1/products/'.$id, ['estoque' => 1])
+                    ->assertNotFound()->assertJsonPath('message', 'Recurso não encontrado.');
+            }
+        }
+    }
 }

@@ -21,7 +21,7 @@ class ListProductsRequest extends FormRequest
             'search' => ['nullable', 'string', 'max:255'],
             'categoria' => ['nullable', 'string', 'max:100'],
             'preco_min' => ['nullable', 'numeric', 'min:0'],
-            'preco_max' => ['nullable', 'numeric', 'min:0', 'gte:preco_min'],
+            'preco_max' => ['nullable', 'numeric', 'min:0', ...($this->filled('preco_min') ? ['gte:preco_min'] : [])],
             'em_estoque' => ['nullable', 'in:true,false,0,1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];
