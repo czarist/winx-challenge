@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\ProductSearchController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->controller(AuthController::class)->group(function () {
@@ -17,4 +18,10 @@ Route::prefix('auth')->controller(AuthController::class)->group(function () {
     Route::middleware('auth:api')->post('logout', 'logout');
 });
 
-Route::middleware('auth:api')->apiResource('products', ProductController::class);
+Route::middleware('auth:api')->group(function () {
+    // Precisa vir antes do apiResource: caso contrário "search" seria
+    // interpretado como {product} pela rota show.
+    Route::get('products/search', ProductSearchController::class);
+
+    Route::apiResource('products', ProductController::class);
+});
