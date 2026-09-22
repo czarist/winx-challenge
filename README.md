@@ -161,7 +161,7 @@ You can authenticate right from the UI: register/log in via `/auth/register` or 
 `GET /api/v1/products?search=` (documented under [Products](#products)) is the name filter required by the challenge and runs directly against Postgres. `GET /api/v1/products/search` is an **additional** endpoint, dedicated to the smart-search extra powered by Elasticsearch — it doesn't replace the filter above, it complements it:
 
 ```bash
-curl "http://localhost:8000/api/v1/products/search?q=teclado&per_page=10" \
+curl "http://localhost:8000/api/v1/products/search?q=keyboard&per_page=10" \
   -H "Authorization: Bearer {access_token}"
 ```
 
@@ -169,15 +169,15 @@ curl "http://localhost:8000/api/v1/products/search?q=teclado&per_page=10" \
 {
   "data": [ /* products, in ProductResource format, ordered by relevance (_score) */ ],
   "meta": { "total": 3 },
-  "suggestions": ["teclado mecânico", "teclado sem fio"]
+  "suggestions": ["mechanical keyboard", "wireless keyboard"]
 }
 ```
 
 What this endpoint does that the Postgres filter doesn't:
 
 - **Relevance** — `multi_match` weighted more heavily on `nome`, then `categoria`, then `descricao`: more relevant results come first.
-- **Typo tolerance** — `fuzziness: AUTO`, so `"informatica"` (no accent, no typo) and small typos still match `"Informática"`.
-- **Suggestions** — a completion suggester over `nome`, useful for autocomplete as the user types (e.g., `q=Exerc` suggests names starting with "Exerc", even when the main full-text search returns nothing for such a short prefix).
+- **Typo tolerance** — `fuzziness: AUTO`, so small typos like `"keybord"` still match `"Keyboard"`.
+- **Suggestions** — a completion suggester over `nome`, useful for autocomplete as the user types (e.g., `q=Key` suggests names starting with "Key", even when the main full-text search returns nothing for such a short prefix).
 
 Indexed documents come from Postgres (the source of truth); Elasticsearch only holds a search-optimized copy, kept in sync asynchronously by the `SyncProductSearchIndex` job on every product create/update/delete — the same pattern as the audit log job, never synchronous in the controller.
 
@@ -277,7 +277,7 @@ All endpoints below require `Authorization: Bearer {access_token}`.
 #### `GET` `/api/v1/products` — List with filters and pagination
 
 ```bash
-curl "http://localhost:8000/api/v1/products?search=mouse&categoria=Periféricos&preco_min=50&preco_max=500&em_estoque=true&per_page=10" \
+curl "http://localhost:8000/api/v1/products?search=mouse&categoria=Peripherals&preco_min=50&preco_max=500&em_estoque=true&per_page=10" \
   -H "Authorization: Bearer {access_token}"
 ```
 
@@ -337,12 +337,12 @@ Every error response follows the same format, regardless of cause (validation, a
 
 ```json
 {
-  "message": "Os dados informados são inválidos.",
-  "errors": { "preco": ["O preço não pode ser negativo."] }
+  "message": "The provided data is invalid.",
+  "errors": { "preco": ["The price cannot be negative."] }
 }
 ```
 
-`errors` only appears when the failure is a validation error (422); for every other case (401, 404, 405, 429, 500, 503) the response carries only `message`. API messages are returned in Portuguese (`pt-BR`), the challenge's target locale.
+`errors` only appears when the failure is a validation error (422); for every other case (401, 404, 405, 429, 500, 503) the response carries only `message`. The text above is translated for readability — the API actually replies in Portuguese (`pt-BR`), the challenge's target locale.
 
 ---
 
