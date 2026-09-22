@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
+use App\Repositories\Contracts\ProductRepositoryInterface;
+use App\Repositories\ProductRepository;
 use App\Services\AuthService;
 use App\Services\Contracts\AuthServiceInterface;
+use App\Services\Contracts\ProductServiceInterface;
+use App\Services\ProductService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -13,6 +17,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(ProductRepositoryInterface::class, ProductRepository::class);
+        $this->app->bind(ProductServiceInterface::class, ProductService::class);
         $this->app->bind(AuthServiceInterface::class, AuthService::class);
     }
 
