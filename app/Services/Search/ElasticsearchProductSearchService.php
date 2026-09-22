@@ -6,6 +6,8 @@ use App\Models\Product;
 use App\Services\Search\Contracts\ProductSearchServiceInterface;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\Exception\ClientResponseException;
+use RuntimeException;
+use Throwable;
 
 class ElasticsearchProductSearchService implements ProductSearchServiceInterface
 {
@@ -19,6 +21,12 @@ class ElasticsearchProductSearchService implements ProductSearchServiceInterface
     public function index(Product $product): void
     {
         $this->ensureIndexExists();
+
+        $this->writeProduct($product);
+    }
+
+    private function writeProduct(Product $product): void
+    {
 
         $this->client->index([
             'index' => $this->index,
@@ -37,8 +45,91 @@ class ElasticsearchProductSearchService implements ProductSearchServiceInterface
     {
         try {
             $this->client->delete(['index' => $this->index, 'id' => (string) $productId]);
-        } catch (ClientResponseException) {
-            // Já não estava no índice (404) — nada a fazer.
+        } catch (ClientResponseException $e) {
+            if ($e->getResponse()->getStatusCode() !== 404) {
+                throw $e;
+            }
+        }
+    }
+
+    public function reindex(): void
+    {
+        $this->ensureIndexExists();
+
+        foreach (Product::query()->lazyById(200) as $product) {
+            $this->writeProduct($product);
+        }
+
+        $this->refreshIndex();
+        $this->removeOrphans();
+        $this->refreshIndex();
+    }
+
+    private function removeOrphans(): void
+    {
+        $scrollId = null;
+        $failed = false;
+
+        try {
+            $response = $this->client->search([
+                'index' => $this->index,
+                'scroll' => '1m',
+                'allow_partial_search_results' => false,
+                'body' => [
+                    'size' => 200,
+                    '_source' => false,
+                    'sort' => ['_doc'],
+                    'query' => ['match_all' => (object) []],
+                ],
+            ])->asArray();
+
+            while (true) {
+                $scrollId = $response['_scroll_id'] ?? $scrollId;
+
+                if (($response['timed_out'] ?? false) || ($response['_shards']['failed'] ?? 0) > 0) {
+                    throw new RuntimeException('A leitura do índice de produtos ficou incompleta.');
+                }
+
+                $hits = $response['hits']['hits'] ?? [];
+
+                if ($hits === []) {
+                    break;
+                }
+
+                $indexedIds = array_column($hits, '_id');
+                $existingIds = Product::query()->whereIn('id', $indexedIds)->pluck('id')->all();
+
+                foreach (array_diff($indexedIds, $existingIds) as $productId) {
+                    $this->remove((int) $productId);
+                }
+
+                $response = $this->client->scroll([
+                    'body' => ['scroll_id' => $scrollId, 'scroll' => '1m'],
+                ])->asArray();
+            }
+        } catch (Throwable $e) {
+            $failed = true;
+
+            throw $e;
+        } finally {
+            if ($scrollId !== null) {
+                try {
+                    $this->client->clearScroll(['body' => ['scroll_id' => [$scrollId]]]);
+                } catch (Throwable $e) {
+                    if (! $failed) {
+                        throw $e;
+                    }
+                }
+            }
+        }
+    }
+
+    private function refreshIndex(): void
+    {
+        $response = $this->client->indices()->refresh(['index' => $this->index])->asArray();
+
+        if (($response['_shards']['failed'] ?? 0) > 0) {
+            throw new RuntimeException('Não foi possível atualizar todos os shards do índice de produtos.');
         }
     }
 

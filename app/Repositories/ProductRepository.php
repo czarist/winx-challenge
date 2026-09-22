@@ -13,6 +13,7 @@ class ProductRepository implements ProductRepositoryInterface
     {
         return $this->applyFilters(Product::query(), $filters)
             ->latest()
+            ->orderByDesc('id')
             ->paginate($filters->perPage)
             ->withQueryString();
     }

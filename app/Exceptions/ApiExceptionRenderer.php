@@ -31,7 +31,7 @@ class ApiExceptionRenderer
             return null;
         }
 
-        return match (true) {
+        $response = match (true) {
             $exception instanceof ValidationException => $this->validation($exception),
             $exception instanceof TokenExpiredException => $this->error('Token expirado.', 401),
             $exception instanceof TokenInvalidException => $this->error('Token inválido.', 401),
@@ -49,6 +49,12 @@ class ApiExceptionRenderer
             ),
             default => $this->unexpected($exception),
         };
+
+        if ($exception instanceof HttpExceptionInterface) {
+            $response->headers->add($exception->getHeaders());
+        }
+
+        return $response;
     }
 
     private function validation(ValidationException $exception): JsonResponse

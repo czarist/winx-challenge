@@ -19,9 +19,9 @@ class StoreProductRequest extends FormRequest
         return [
             'nome' => ['required', 'string', 'max:255'],
             'descricao' => ['nullable', 'string'],
-            'preco' => ['required', 'numeric', 'min:0'],
+            'preco' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'categoria' => ['required', 'string', 'max:100'],
-            'estoque' => ['required', 'integer', 'min:0'],
+            'estoque' => ['required', 'integer', 'min:0', 'max:2147483647'],
         ];
     }
 
@@ -36,11 +36,13 @@ class StoreProductRequest extends FormRequest
             'preco.required' => 'O preço é obrigatório.',
             'preco.numeric' => 'O preço deve ser um valor numérico.',
             'preco.min' => 'O preço não pode ser negativo.',
+            'preco.max' => 'O preço não pode ultrapassar :max.',
             'categoria.required' => 'A categoria é obrigatória.',
             'categoria.max' => 'A categoria pode ter no máximo :max caracteres.',
             'estoque.required' => 'A quantidade em estoque é obrigatória.',
             'estoque.integer' => 'A quantidade em estoque deve ser um número inteiro.',
             'estoque.min' => 'A quantidade em estoque não pode ser negativa.',
+            'estoque.max' => 'A quantidade em estoque não pode ultrapassar :max.',
         ];
     }
 }

@@ -2,8 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Product;
-use App\Services\Search\Contracts\ProductSearchServiceInterface;
+use App\Services\Search\ElasticsearchProductSearchService;
 use Elastic\Transport\Exception\NoNodeAvailableException;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -13,16 +12,10 @@ use Illuminate\Console\Command;
 #[Description('Reindexa todos os produtos no Elasticsearch')]
 class ReindexProducts extends Command
 {
-    public function handle(ProductSearchServiceInterface $search): int
+    public function handle(ElasticsearchProductSearchService $search): int
     {
         try {
-            Product::query()->orderBy('id')->chunk(200, function ($products) use ($search) {
-                foreach ($products as $product) {
-                    $search->index($product);
-                }
-
-                $this->output->write('.');
-            });
+            $search->reindex();
         } catch (NoNodeAvailableException $e) {
             $this->newLine();
             $this->error("Elasticsearch indisponível: {$e->getMessage()}");

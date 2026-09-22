@@ -1,8 +1,6 @@
 #!/bin/sh
 set -e
 
-READY_MARKER="storage/framework/docker-ready"
-
 wait_for_database() {
     until php -r "new PDO('pgsql:host='.getenv('DB_HOST').';port='.getenv('DB_PORT').';dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD'));" >/dev/null 2>&1; do
         echo "Aguardando o banco de dados..."
@@ -22,9 +20,7 @@ if [ "$1" = "php-fpm" ]; then
     wait_for_database
     php artisan migrate --force
 
-    # O seeder só roda no primeiro boot deste volume: ProductSeeder não é
-    # idempotente e reexecutá-lo a cada restart duplicaria os produtos.
-    [ -f "$READY_MARKER" ] || php artisan db:seed --force
+    php artisan db:seed --force
 
     # O setup acima roda como root, mas o php-fpm atende requisições como
     # www-data. Sem isso, a regeneração do Swagger (L5_SWAGGER_GENERATE_ALWAYS)
@@ -46,8 +42,6 @@ if [ "$1" = "php-fpm" ]; then
         done
     ) &
 
-    mkdir -p "$(dirname "$READY_MARKER")"
-    touch "$READY_MARKER"
 else
     wait_for_database
 fi

@@ -13,7 +13,7 @@ Desenvolvida em Laravel 13 para o desafio técnico "Desenvolvedor(a) Back-End S�
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 [![JWT](https://img.shields.io/badge/Auth-JWT-000000?style=flat-square&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-6BA539?style=flat-square&logo=swagger&logoColor=white)](#documentação-interativa-swagger)
-[![Tests](https://img.shields.io/badge/tests-56%20passing-4E9A06?style=flat-square&logo=php&logoColor=white)](#testes-automatizados)
+[![Tests](https://img.shields.io/badge/tests-77%20passing-4E9A06?style=flat-square&logo=php&logoColor=white)](#testes-automatizados)
 
 [Stack](#stack) • [Arquitetura](#arquitetura) • [Docker](#setup-com-docker) • [Local](#setup-local) • [Swagger](#documentação-interativa-swagger) • [Busca full-text](#busca-full-text-elasticsearch) • [Testes](#testes-automatizados) • [Exemplos de API](#exemplos-de-chamadas-de-api) • [Diferenciais](#diferenciais-implementados)
 
@@ -76,9 +76,9 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-O container `app` cuida de tudo sozinho no primeiro boot: instala dependências (se `vendor/` não existir), gera `APP_KEY`/`JWT_SECRET` (se ausentes), espera o Postgres ficar pronto, roda as migrations, popula o banco (só na primeira vez) e gera a documentação do Swagger — antes de subir o PHP-FPM. O Nginx só começa a aceitar tráfego depois que esse setup termina (via healthcheck), então não há corrida entre os containers. Em background, ele também tenta reindexar os produtos no Elasticsearch (ver [Busca full-text](#busca-full-text-elasticsearch)) assim que o cluster fica disponível, sem bloquear a API por isso.
+O container `app` instala dependências (se `vendor/` não existir), gera `APP_KEY`/`JWT_SECRET` (se ausentes), espera o Postgres ficar pronto, roda as migrations e o seed e gera a documentação do Swagger antes de subir o PHP-FPM. O seed preserva o usuário existente e cria os 50 produtos de exemplo apenas quando a tabela de produtos está vazia. Isso também funciona após recriar os volumes; se todos os produtos forem excluídos, o próximo boot voltará a popular os exemplos. O Nginx só começa a aceitar tráfego depois que esse setup termina (via healthcheck). Em background, o app também tenta reindexar os produtos no Elasticsearch (ver [Busca full-text](#busca-full-text-elasticsearch)) assim que o cluster fica disponível, sem bloquear a API por isso.
 
-O worker também aguarda o healthcheck do `app` antes de iniciar, sem depender do arquivo marcador de seed, e usa `restart: unless-stopped` para se recuperar de falhas.
+O worker também aguarda o healthcheck do `app` antes de iniciar e usa `restart: unless-stopped` para se recuperar de falhas.
 
 Serviços subidos:
 
@@ -187,6 +187,8 @@ Os documentos indexados vêm do Postgres (fonte da verdade); o Elasticsearch só
 - **Docker** — o container `app` roda `products:reindex` em background após o setup (com retry, já que o Elasticsearch normalmente ainda está de boot nesse momento).
 - **Local** — rode `php artisan products:reindex` manualmente depois do `migrate --seed` (ver [Setup local](#setup-local)).
 
+O comando também remove do índice os documentos cujo produto já não existe no PostgreSQL, inclusive quando o banco está vazio. A reconciliação ocorre em lotes e preserva o índice ativo. Escritas concorrentes continuam sendo sincronizadas pelos jobs; a operação não representa um snapshot transacional entre os dois serviços. Na exclusão, somente 404 é ignorado; outros erros do Elasticsearch permitem novas tentativas pelo worker.
+
 ---
 
 ## Testes automatizados
@@ -198,6 +200,8 @@ php artisan test
 Roda contra SQLite em memória (configurado em `phpunit.xml`), sem precisar de Postgres nem de Elasticsearch disponíveis — não depende do Docker nem de nenhum serviço externo. No ambiente de testes, `ProductSearchServiceInterface` é ligado a uma implementação nula (`NullProductSearchService`) em vez do Elasticsearch real, pelo mesmo motivo que os testes usam SQLite em vez de Postgres: testar o comportamento da aplicação, não a infraestrutura.
 
 Cobre autenticação (registro, login, logout, refresh, incluindo blacklist de token) e as regras de negócio de produtos (CRUD, filtros, paginação, autorização, e o disparo dos jobs assíncronos de auditoria e indexação).
+
+Inclui regressões para paginação com datas iguais, limites numéricos do PostgreSQL, seed repetido, headers de erros HTTP e reconciliação do Elasticsearch com HTTP simulado. A configuração força SQLite em memória mesmo com variáveis externas. A suíte aborta antes das migrations se detectar outra configuração de banco; nesse caso, limpe o cache com `php artisan config:clear`.
 
 ---
 
@@ -280,6 +284,8 @@ curl "http://localhost:8000/api/v1/products?search=mouse&categoria=Periféricos&
 
 #### `POST` `/api/v1/products` — Criar
 
+`preco` aceita valores de 0 a 99999999.99; `estoque` aceita inteiros de 0 a 2147483647. Os mesmos limites se aplicam à atualização; valores fora dessas faixas retornam 422.
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/products \
   -H "Authorization: Bearer {access_token}" \
@@ -337,7 +343,7 @@ Toda resposta de erro segue o mesmo formato, independente da causa (validação,
 - **JWT completo** — register/login/logout/refresh, com blacklist de token (logout e refresh invalidam o token anterior) — não apenas o login básico pedido no desafio.
 - **Swagger/OpenAPI** — todos os endpoints documentados via anotações `@OA\*` em docblock, com schemas de request/response, exemplos e autenticação testável direto pela UI.
 - **Repository/Service por trás de interfaces** — injeção de dependência via `AppServiceProvider`, sem acoplar a regra de negócio ao Eloquent nem os controllers à implementação concreta (vale para o Postgres e para o Elasticsearch).
-- **Testes automatizados** — 56 testes (PHPUnit) cobrindo autenticação e as regras de negócio de produtos, rodando sem depender de Postgres, Elasticsearch ou Docker.
+- **Testes automatizados** — 77 testes (PHPUnit) cobrindo autenticação e as regras de negócio de produtos, rodando sem depender de Postgres, Elasticsearch ou Docker.
 - **Rate limiting** — 60 requisições/minuto por usuário (ou IP, se não autenticado) nas rotas de API.
 - **Execução dual sem alteração de código** — um único `docker-compose.yml` e `.env.example` cobrem Docker e execução local; o `app` container faz o próprio setup (install, migrate, seed, permissões, docs, reindexação) e o Nginx só recebe tráfego depois que esse setup termina de verdade.
 - **Busca portável** — o filtro de nome do Postgres usa `LOWER()+LIKE` em vez de `ILIKE` (específico do Postgres), então o mesmo código funciona nos testes (SQLite) e em produção (Postgres) sem sacrificar a busca case-insensitive.

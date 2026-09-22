@@ -36,6 +36,21 @@ class ProductListingTest extends TestCase
         $response->assertOk()->assertJsonCount(5, 'data');
     }
 
+    public function test_products_created_at_the_same_time_have_stable_pages(): void
+    {
+        $products = Product::factory()->count(12)->create(['created_at' => '2026-09-22 12:00:00']);
+        $expected = $products->pluck('id')->sortDesc()->values()->all();
+        $actual = [];
+
+        foreach ([1, 2, 3] as $page) {
+            $response = $this->actingAs($this->user, 'api')
+                ->getJson('/api/v1/products?per_page=5&page='.$page)->assertOk();
+            $actual = array_merge($actual, array_column($response->json('data'), 'id'));
+        }
+
+        $this->assertSame($expected, $actual);
+    }
+
     public function test_per_page_above_the_limit_is_rejected(): void
     {
         $response = $this->actingAs($this->user, 'api')->getJson('/api/v1/products?per_page=500');

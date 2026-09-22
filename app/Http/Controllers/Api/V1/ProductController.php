@@ -60,9 +60,9 @@ class ProductController extends Controller
      *             required={"nome", "preco", "categoria", "estoque"},
      *             @OA\Property(property="nome", type="string", example="Teclado mecânico"),
      *             @OA\Property(property="descricao", type="string", nullable=true, example="Switches azuis, layout ABNT2"),
-     *             @OA\Property(property="preco", type="number", format="float", example=349.9),
+     *             @OA\Property(property="preco", type="number", format="float", minimum=0, maximum=99999999.99, example=349.9),
      *             @OA\Property(property="categoria", type="string", example="Periféricos"),
-     *             @OA\Property(property="estoque", type="integer", example=42)
+     *             @OA\Property(property="estoque", type="integer", minimum=0, maximum=2147483647, example=42)
      *         )
      *     ),
      *     @OA\Response(response=201, description="Produto criado", @OA\JsonContent(@OA\Property(property="data", ref="#/components/schemas/Product"))),
@@ -108,9 +108,9 @@ class ProductController extends Controller
      *         @OA\JsonContent(
      *             @OA\Property(property="nome", type="string", example="Teclado mecânico"),
      *             @OA\Property(property="descricao", type="string", nullable=true, example="Switches azuis, layout ABNT2"),
-     *             @OA\Property(property="preco", type="number", format="float", example=329.9),
+     *             @OA\Property(property="preco", type="number", format="float", minimum=0, maximum=99999999.99, example=329.9),
      *             @OA\Property(property="categoria", type="string", example="Periféricos"),
-     *             @OA\Property(property="estoque", type="integer", example=30)
+     *             @OA\Property(property="estoque", type="integer", minimum=0, maximum=2147483647, example=30)
      *         )
      *     ),
      *     @OA\Response(response=200, description="Produto atualizado", @OA\JsonContent(@OA\Property(property="data", ref="#/components/schemas/Product"))),
