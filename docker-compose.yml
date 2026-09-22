@@ -61,5 +61,28 @@ services:
       timeout: 5s
       retries: 10
 
+  # Busca full-text/relevância (diferencial). Deliberadamente sem
+  # depends_on nos serviços app/queue: a API principal (auth, CRUD,
+  # filtros via Postgres) não depende do Elasticsearch para funcionar,
+  # só o endpoint GET /products/search.
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.0
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.security.http.ssl.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "${ELASTICSEARCH_FORWARD_PORT:-9200}:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://127.0.0.1:9200/_cluster/health | grep -q '\"status\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
 volumes:
   pgdata:
+  esdata:

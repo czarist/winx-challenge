@@ -32,6 +32,20 @@ if [ "$1" = "php-fpm" ]; then
     chmod -R ugo+rwX storage bootstrap/cache
 
     php artisan l5-swagger:generate
+
+    # Reindexação no Elasticsearch é best-effort e roda em background: a
+    # API principal não deve esperar (nem falhar) pelo índice de busca, que
+    # é só o diferencial opcional de GET /products/search. O ES normalmente
+    # ainda está subindo neste ponto, daí o retry.
+    (
+        i=0
+        while [ "$i" -lt 60 ]; do
+            php artisan products:reindex >/dev/null 2>&1 && break
+            i=$((i + 1))
+            sleep 3
+        done
+    ) &
+
     mkdir -p "$(dirname "$READY_MARKER")"
     touch "$READY_MARKER"
 else
