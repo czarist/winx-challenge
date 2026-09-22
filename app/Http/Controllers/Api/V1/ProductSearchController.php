@@ -7,7 +7,6 @@ use App\Http\Requests\Product\SearchProductsRequest;
 use App\Http\Resources\ProductResource;
 use App\Services\Search\Contracts\ProductSearchServiceInterface;
 use Illuminate\Http\JsonResponse;
-use OpenApi\Attributes as OA;
 
 class ProductSearchController extends Controller
 {
@@ -15,33 +14,34 @@ class ProductSearchController extends Controller
         private readonly ProductSearchServiceInterface $searchService,
     ) {}
 
-    #[OA\Get(
-        path: '/api/v1/products/search',
-        tags: ['Products'],
-        summary: 'Busca full-text por produtos, com ranking de relevância e sugestões (Elasticsearch)',
-        description: 'Diferencial do desafio: busca inteligente via Elasticsearch, com tolerância a erros de digitação, relevância por _score e sugestões de nomes. Complementa (não substitui) o filtro `search` de GET /products, que roda direto no Postgres.',
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'q', in: 'query', required: true, description: 'Termo de busca', schema: new OA\Schema(type: 'string', minLength: 2)),
-            new OA\Parameter(name: 'per_page', in: 'query', description: 'Quantidade de resultados (1-50)', schema: new OA\Schema(type: 'integer', default: 15)),
-        ],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Resultado da busca',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Product')),
-                        new OA\Property(property: 'meta', properties: [new OA\Property(property: 'total', type: 'integer', example: 3)], type: 'object'),
-                        new OA\Property(property: 'suggestions', type: 'array', items: new OA\Items(type: 'string'), example: ['mouse gamer', 'mouse sem fio']),
-                    ],
-                ),
-            ),
-            new OA\Response(response: 401, description: 'Não autenticado', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
-            new OA\Response(response: 422, description: 'Dados inválidos', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
-            new OA\Response(response: 503, description: 'Serviço de busca indisponível', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
-        ],
-    )]
+    /**
+     * @OA\Get(
+     *     path="/api/v1/products/search",
+     *     tags={"Products"},
+     *     summary="Busca full-text por produtos, com ranking de relevância e sugestões (Elasticsearch)",
+     *     description="Diferencial do desafio: busca inteligente via Elasticsearch, com tolerância a erros de digitação, relevância por _score e sugestões de nomes. Complementa (não substitui) o filtro `search` de GET /products, que roda direto no Postgres.",
+     *     security={{"bearerAuth"={}}},
+     *
+     *     @OA\Parameter(name="q", in="query", required=true, description="Termo de busca", @OA\Schema(type="string", minLength=2)),
+     *     @OA\Parameter(name="per_page", in="query", description="Quantidade de resultados (1-50)", @OA\Schema(type="integer", default=15)),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Resultado da busca",
+     *
+     *         @OA\JsonContent(
+     *
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Product")),
+     *             @OA\Property(property="meta", type="object", @OA\Property(property="total", type="integer", example=3)),
+     *             @OA\Property(property="suggestions", type="array", @OA\Items(type="string"), example={"mouse gamer", "mouse sem fio"})
+     *         )
+     *     ),
+     *
+     *     @OA\Response(response=401, description="Não autenticado", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
+     *     @OA\Response(response=422, description="Dados inválidos", @OA\JsonContent(ref="#/components/schemas/ValidationErrorResponse")),
+     *     @OA\Response(response=503, description="Serviço de busca indisponível", @OA\JsonContent(ref="#/components/schemas/ErrorResponse"))
+     * )
+     */
     public function __invoke(SearchProductsRequest $request): JsonResponse
     {
         $result = $this->searchService->search(

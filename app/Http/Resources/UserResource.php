@@ -5,18 +5,19 @@ namespace App\Http\Resources;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use OpenApi\Attributes as OA;
 
-#[OA\Schema(
-    schema: 'User',
-    properties: [
-        new OA\Property(property: 'id', type: 'integer', example: 1),
-        new OA\Property(property: 'name', type: 'string', example: 'Maria Silva'),
-        new OA\Property(property: 'email', type: 'string', format: 'email', example: 'maria@example.com'),
-        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
-    ],
-)]
-/** @mixin User */
+/**
+ * @mixin User
+ *
+ * @OA\Schema(
+ *     schema="User",
+ *
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="name", type="string", example="Maria Silva"),
+ *     @OA\Property(property="email", type="string", format="email", example="maria@example.com"),
+ *     @OA\Property(property="created_at", type="string", format="date-time")
+ * )
+ */
 class UserResource extends JsonResource
 {
     /**
