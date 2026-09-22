@@ -30,4 +30,9 @@ class LogProductActivity implements ShouldQueue
             'payload' => $this->payload,
         ]);
     }
+
+    public function action(): ProductLogAction
+    {
+        return $this->action;
+    }
 }
