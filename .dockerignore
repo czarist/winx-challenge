@@ -1,0 +1,12 @@
+.git
+.github
+vendor
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+storage/api-docs
+node_modules
+tests
+*.md
+Desafio_Tecnico__Desenvolvedor(a)_Back-End_Senior.pdf
