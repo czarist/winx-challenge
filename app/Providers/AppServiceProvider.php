@@ -8,6 +8,11 @@ use App\Services\AuthService;
 use App\Services\Contracts\AuthServiceInterface;
 use App\Services\Contracts\ProductServiceInterface;
 use App\Services\ProductService;
+use App\Services\Search\Contracts\ProductSearchServiceInterface;
+use App\Services\Search\ElasticsearchProductSearchService;
+use App\Services\Search\NullProductSearchService;
+use Elastic\Elasticsearch\Client;
+use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -20,6 +25,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ProductRepositoryInterface::class, ProductRepository::class);
         $this->app->bind(ProductServiceInterface::class, ProductService::class);
         $this->app->bind(AuthServiceInterface::class, AuthService::class);
+        $this->app->bind(
+            ProductSearchServiceInterface::class,
+            $this->app->environment('testing') ? NullProductSearchService::class : ElasticsearchProductSearchService::class,
+        );
+
+        $this->app->singleton(Client::class, fn () => ClientBuilder::create()
+            ->setHosts(config('elasticsearch.hosts'))
+            ->build());
     }
 
     public function boot(): void

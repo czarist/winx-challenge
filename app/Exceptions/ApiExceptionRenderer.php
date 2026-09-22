@@ -2,6 +2,7 @@
 
 namespace App\Exceptions;
 
+use Elastic\Transport\Exception\NoNodeAvailableException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -38,6 +39,7 @@ class ApiExceptionRenderer
             $exception instanceof AuthenticationException => $this->error('Não autenticado.', 401),
             $exception instanceof AuthorizationException => $this->error('Ação não autorizada.', 403),
             $exception instanceof ModelNotFoundException => $this->error('Recurso não encontrado.', 404),
+            $exception instanceof NoNodeAvailableException => $this->error('Serviço de busca indisponível no momento.', 503),
             $exception instanceof NotFoundHttpException => $this->error('Recurso não encontrado.', 404),
             $exception instanceof MethodNotAllowedHttpException => $this->error('Método HTTP não permitido para esta rota.', 405),
             $exception instanceof TooManyRequestsHttpException => $this->error('Muitas requisições. Tente novamente em instantes.', 429),
