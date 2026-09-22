@@ -1,5 +1,9 @@
 <?php
 
+use L5Swagger\CustomGeneratorInterface;
+use L5Swagger\Generator;
+use OpenApi\scan;
+
 return [
     'default' => 'default',
     'documentations' => [
@@ -107,7 +111,7 @@ return [
              * Use this to provide a custom pre-configured generator.
              * Accepts an instance or a class name (FQCN) implementing the interface.
              *
-             * @see \L5Swagger\CustomGeneratorInterface
+             * @see CustomGeneratorInterface
              */
             'generator_factory' => null,
 
@@ -132,14 +136,20 @@ return [
             /**
              * analyser: defaults to \OpenApi\StaticAnalyser .
              *
-             * @see \OpenApi\scan
+             * @see scan
+             *
+             * Left as null here on purpose - an object literal in a config
+             * file breaks `php artisan config:cache` (Laravel var_export()s
+             * the config array, and these analyser classes don't support
+             * that). AppServiceProvider overrides this value at runtime
+             * instead; see the comment there for why it's needed at all.
              */
             'analyser' => null,
 
             /**
              * analysis: defaults to a new \OpenApi\Analysis .
              *
-             * @see \OpenApi\scan
+             * @see scan
              */
             'analysis' => null,
 
@@ -152,7 +162,7 @@ return [
              *   ['class' => MyProcessor::class, 'after' => SomeProcessor::class]
              *
              * @link https://github.com/zircote/swagger-php/tree/master/Examples/processors/schema-query-parameter
-             * @see \OpenApi\scan
+             * @see scan
              */
             'processors' => [
                 // \App\SwaggerProcessors\SchemaQueryParameter::class,
@@ -162,7 +172,7 @@ return [
             /**
              * pattern: string       $pattern File pattern(s) to scan (default: *.php) .
              *
-             * @see \OpenApi\scan
+             * @see scan
              */
             'pattern' => null,
 
@@ -177,7 +187,7 @@ return [
              * Allows to generate specs either for OpenAPI 3.0.0 or OpenAPI 3.1.0.
              * By default the spec will be in version 3.0.0
              */
-            'open_api_spec_version' => env('L5_SWAGGER_OPEN_API_SPEC_VERSION', \L5Swagger\Generator::OPEN_API_DEFAULT_SPEC_VERSION),
+            'open_api_spec_version' => env('L5_SWAGGER_OPEN_API_SPEC_VERSION', Generator::OPEN_API_DEFAULT_SPEC_VERSION),
         ],
 
         /*

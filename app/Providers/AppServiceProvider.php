@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\OpenApi\GeneratorFactory;
 use App\Repositories\Contracts\ProductRepositoryInterface;
 use App\Repositories\ProductRepository;
 use App\Services\AuthService;
@@ -17,6 +18,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use L5Swagger\GeneratorFactory as BaseGeneratorFactory;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -33,6 +35,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(Client::class, fn () => ClientBuilder::create()
             ->setHosts(config('elasticsearch.hosts'))
             ->build());
+
+        // Restores docblock-style @OA\* annotation scanning for the Swagger
+        // docs (see App\OpenApi\GeneratorFactory for why this can't just be
+        // a config value).
+        $this->app->bind(BaseGeneratorFactory::class, GeneratorFactory::class);
     }
 
     public function boot(): void
