@@ -112,7 +112,7 @@ Prerequisites: PHP 8.3+, Composer, the `pdo_pgsql` extension, and a reachable Po
 composer install
 cp .env.example .env
 php artisan key:generate
-php artisan jwt:secret
+php artisan jwt:secret --force
 ```
 
 Edit `.env` to point to your Postgres — the only change needed from the file's default is swapping `DB_HOST=pgsql` (the Docker service name) for `DB_HOST=127.0.0.1` (or your database's host). The rest (`DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`) already works with a local Postgres created with those same credentials, or adjust them to your environment.
